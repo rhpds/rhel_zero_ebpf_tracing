@@ -1,149 +1,82 @@
-= Building an Application with rpms
+In this step, you will start running the bcc-tools to prepare for
+observing an active workload on the system. In the lab environment there
+are several additional terminal tabs across the top of the interface,
+the names correspond to tools that you will run in this, and following
+steps.
 
-== Downloading the UBI
+First, you will validate the environment and that it is not currently
+using any eBPF calls. To do this, you will install the `+bpftool+`
+utility.
 
-In this lab, you will be installing software into the container 
-image running as an interactive application. To do this you will
-need `yum`, but do not need `systemd` for managing services within the
-container environment.  For that reason, you will be using the *Standard*
-UBI image (as opposed to the Minimal or Multi-service images).
-
-Using the "buildah from" command will download and meld the container image. This particular image we are using is the Red Hat Universal Base Image or UBI. From the ourput of the command, you will notice that we are pulling down the latest one, which is for RHEL 9. 
-
-. Execute the  download the Standard UBI
-image from Red Hat's registry.
-
-+
-[source,sh,role=execute]
-----
-buildah from registry.access.redhat.com/ubi9/ubi
-----
-
-[#repositories]
-== Installing Repositories
-In this lab, you are going to containerize a software package that is already
-packaged in RPM format and stored in the Extra Packages for Enterprise Linux
-(EPEL) repository.
-
-Software often has requirements for prerequisite software that must be installed
-on the machine for it to work properly.  `yum` will resolve those
-dependencies for you, as long as it can locate the required packages in
-repositories defined on the machine.  The Red Hat Universal Base Image (UBI)
-downloaded in the previous step has access to some Red Hat Enterprise Linux
-repositories.  However, the target package for the lab is from EPEL.  
-
-. In the command below, `buildah` is going to run a command on the
-`ubi-working-container` image.  The `--` indicates that the command should be
-executed from within the container, which means the results will be applied into
-the container image.  Lastly, you are providing the `yum` command to install a
-package that defines all of the repositories from EPEL, `epel-release-latest-9`.
-
-+
 [source,bash]
 ----
-buildah run ubi-working-container -- yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+yum install -y bpftool
 ----
 
+Next, run `+bpftool+` to see what eBPF programs are currently loaded in
+the kernel. If there are no eBPF programs in use, the tool will return
+no output.
 
-. You can verify that the above command did not install the RPM on the host system.
-
-+
 [source,bash]
 ----
-rpm -q epel-release
+bpftool prog list | grep -A 3 cgroup
 ----
 
-NOTE: If your repository configurations are not distributed as an RPM, but instead as
-individual `.repo` files, you could use the `buildah copy` command to copy
-files from the host operating system into the container image.  You will see
-an example of using `buildah copy` later in this lab.
-
-[#software]
-== Installing Software
-
-
-. Now that the yum repositories are defined within the container, execute 
-another `yum install`, within the container, to install the target
-software: `moon-buggy`.
-
-+
-[source,bash]
-----
-buildah run ubi-working-container -- yum -y install moon-buggy
-----
-
-
-== Committing the Container Image
-
-. At this point, the container is configured.  It is time to transition from a
-working container into a committed image.  In the command below, you will use
-the `buildah` command to commit the working container to an image called:
-`moon-buggy`.
-
-+
-[source,bash]
-----
-buildah commit ubi-working-container moon-buggy
-----
-
-+
-. The output of `podman image list` should confirm the image was created.
-
-+
-[source,bash]
-----
-podman image list
-----
-
-
-== Deploy the Container
-
-Now the software has been installed and a new container image created.  It is
-time to spawn a runtime of the container image and validate the software.  The
-software we are using is a command line command.  
-
-. When you `run` the container,
-it will be in interactive (`-it`) mode, based on the `moon-buggy` container
-image and the command run interactively will be `/usr/bin/moon-buggy`.
-
-+
-[source,bash]
-----
-podman run -it moon-buggy /usr/bin/moon-buggy
-----
-
-+
-[source,textinfo]
-----
+20: cgroup_device tag 40ddf486530245f5 gpl loaded_at
+2022-11-14T20:28:36+0000 uid 0 xlated 504B jited 309B memlock 4096B pids
+systemd(1) 21: cgroup_skb tag 6deef7357e7b4530 gpl loaded_at
+2022-11-14T20:28:36+0000 uid 0 xlated 64B jited 54B memlock 4096B pids
+systemd(1) 22: cgroup_skb tag 6deef7357e7b4530 gpl loaded_at
+2022-11-14T20:28:36+0000 uid 0 xlated 64B jited 54B memlock 4096B pids
+systemd(1) 23: cgroup_device tag ca8e50a3c7fb034b gpl loaded_at
+2022-11-14T20:28:37+0000 uid 0 xlated 496B jited 307B memlock 4096B pids
+systemd(1) 24: cgroup_skb tag 6deef7357e7b4530 gpl loaded_at
+2022-11-14T20:28:37+0000 uid 0 xlated 64B jited 54B memlock 4096B pids
+systemd(1)
 
 <<< OUTPUT ABRIDGED >>>
-               MM     MM   OOOOO    OOOOO   NN     N
-               M M   M M  O     O  O     O  N N    N
-               M  M M  M  O     O  O     O  N  N   N
-               M   M   M  O     O  O     O  N   N  N
-               M       M  O     O  O     O  N    N N
-               M       M   OOOOO    OOOOO   N     NN
 
-                     BBBBBB   U     U   GGGGG    GGGGG   Y     Y
-                     B     B  U     U  G     G  G     G   Y   Y
-                     BBBBBB   U     U  G        G          Y Y
-                     B     B  U     U  G   GGG  G   GGG     Y
-                     B     B  U     U  G     G  G     G    Y
-                     BBBBBB    UUUUU    GGGGG    GGGGG   YY
+....
 
-<<< OUTPUT ABRIDGED >>>
-----
+The tool likely provided output, similar to that displayed above. Reviewing that output, the eBPF tools already running are related to the cgroup2 implementation on the machine. You will add to this list by launching additional tools, but is always good to know what is already in-place on the system before adding additional tooling to the machine.
 
-. You can now play the Moon Buggy game, which is a text-based version of the
-popular Moon Patrol.  When you are finished, use the `q` command to quit the
-game, which will terminate the container.
+Now, observe the tabs for the terminal.
 
-+
-Alternatively, you can use `podman` to kill the running container from
-*Terminal 2*.
+Click on the tab `gethostlatency`.
 
-+
-[source,bash]
-----
-podman kill $(podman ps | grep -v CONTAINER | cut -f1 -d" " )
-----
+![gethostlatencytab](../assets/gethostlatencytab.png)
+
+The tool `gethostlatency` has been launched for you by running `/usr/share/bcc/tools/gethostlatency`.
+
+```bash
+/usr/share/bcc/tools/gethostlatency
+....
+
+TIME PID COMM LATms HOST
+
+....
+
+The `gethostlatency` bcc-tool is showing latency statistics on the `getaddrinfo()` and `gethostbyname()` system calls. Effectively, you get to see how long these system calls take and which hostnames the applications need IP addresses for. This can be useful for discovering network connections that your applications are making.
+
+Next, click on the tab `tcplife`.
+
+![tcplifetab](../assets/tcplifetab.png)
+
+`tcplife` was launched with the following command:
+
+```bash
+/usr/share/bcc/tools/tcplife
+....
+
+The following header should now be displayed in the _tcplife_ terminal,
+indicating the tool is running:
+
+PID COMM LADDR LPORT RADDR RPORT TX_KB RX_KB MS ```
+
+`+tcplife+` will tell you data about established tcp connections. PID is
+the process ID of the process opening the connection. COMM, the command
+that corresponds to the PID. LADDR and LPORT reference the local address
+and port of the connection. RADDR and RPORT the remote address and port.
+TX_KB and RX_KB are the amount of data Transmitted (in Kilobytes) and
+Received (in Kilobytes). MS is the time of the connection, in
+milliseconds.
