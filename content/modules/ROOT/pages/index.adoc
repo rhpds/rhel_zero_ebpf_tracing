@@ -9,39 +9,32 @@ machine.
 The bcc-tools package provides many pre-created tools that provide data
 from functions built with eBPF.
 
-First, in the *yum* terminal tab, install the kernel-devel package for
+First, in the *dnf* terminal tab, install the kernel-devel package for
 your currently running kernel and the bcc-tools packages.
-
-.Yum tab
-image::yumtab.png[Yum tab]
+image:../assets/yumtab.png[yumtab.png]
 
 Enter the following command:
 
-[source,bash]
+[source,bash,run]
 ----
-yum install -y kernel-devel-$(uname -r) bcc-tools
+dnf install -y kernel-devel-$(uname -r) bcc-tools
 ----
 
 ____
-*Note:* In the command above, we embed the `+uname -r+` command to
+*Note:* In the command above, we embed the `uname -r` command to
 automatically determine, and embed, the version of the currently running
 kernel.
 ____
 
 Next, inspect the content of the bcc-tools package to see some of the
-pre-built tool catalog that is provided. Each of these tools has a
-`+man+` page which provides details on what data the tool produces as
-well as any options that may be used when running the tool.
+pre-built tool catalog that is provided. Each of these tools has a `man`
+page which provides details on what data the tool produces as well as
+any options that may be used when running the tool.
 
-[source,bash]
+[source,bash,run]
 ----
 rpm -ql bcc-tools | grep /usr/share/bcc/tools/
 ----
-
-/usr/share/bcc/tools/argdist /usr/share/bcc/tools/bashreadline
-/usr/share/bcc/tools/biolatency /usr/share/bcc/tools/biosnoop
-
-<< OUTPUT ABRIDGED >> ```
 
 You will be working with several of these tools in the next steps. The
 tools provided by the bcc-tools package are installed in the
